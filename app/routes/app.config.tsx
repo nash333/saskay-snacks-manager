@@ -25,8 +25,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const metaobjectsService = new MetaobjectsService(admin.graphql);
 
   // Check which metaobject definitions exist
-  const [ingredientExists, packagingExists, priceHistoryExists] = await Promise.all([
+  const [
+    ingredientExists,
+    ingredientCategoryExists,
+    ingredientUnitTypeExists,
+    recipeExists,
+    packagingExists,
+    priceHistoryExists
+  ] = await Promise.all([
     metaobjectsService.ensureMetaobjectDefinitionExists('ingredient'),
+  metaobjectsService.ensureMetaobjectDefinitionExists('category'),
+  metaobjectsService.ensureMetaobjectDefinitionExists('unit_type'),
+    metaobjectsService.ensureMetaobjectDefinitionExists('recipe'),
     metaobjectsService.ensureMetaobjectDefinitionExists('packaging'),
     metaobjectsService.ensureMetaobjectDefinitionExists('price_history')
   ]);
@@ -34,9 +44,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({
     metaobjectStatus: {
       ingredient: ingredientExists,
+      ingredientCategory: ingredientCategoryExists,
+      ingredientUnitType: ingredientUnitTypeExists,
+      recipe: recipeExists,
       packaging: packagingExists,
       priceHistory: priceHistoryExists,
-      allReady: ingredientExists && packagingExists && priceHistoryExists
+      allReady:
+        ingredientExists &&
+        ingredientCategoryExists &&
+        ingredientUnitTypeExists &&
+        recipeExists &&
+        packagingExists &&
+        priceHistoryExists
     }
   });
 };
@@ -148,6 +167,21 @@ export default function ConfigPage() {
                 </InlineStack>
 
                 <InlineStack align="space-between">
+                  <Text as="span" variant="bodyMd">Ingredient Category Definition</Text>
+                  {getStatusBadge(metaobjectStatus.ingredientCategory)}
+                </InlineStack>
+
+                <InlineStack align="space-between">
+                  <Text as="span" variant="bodyMd">Ingredient Unit Type Definition</Text>
+                  {getStatusBadge(metaobjectStatus.ingredientUnitType)}
+                </InlineStack>
+
+                <InlineStack align="space-between">
+                  <Text as="span" variant="bodyMd">Recipe Definition</Text>
+                  {getStatusBadge(metaobjectStatus.recipe)}
+                </InlineStack>
+
+                <InlineStack align="space-between">
                   <Text as="span" variant="bodyMd">Packaging Definition</Text>
                   {getStatusBadge(metaobjectStatus.packaging)}
                 </InlineStack>
@@ -230,26 +264,40 @@ export default function ConfigPage() {
                 What does setup do?
               </Text>
 
-              <Text as="p" variant="bodyMd">
-                The setup process creates three custom data structures in your Shopify store:
-              </Text>
-
-              <BlockStack gap="200">
                 <Text as="p" variant="bodyMd">
-                  <strong>Ingredient:</strong> Stores food ingredient data including name,
-                  category, supplier, cost per unit, allergens, and activity status.
+                  The setup process creates several custom data structures (metaobjects) in your Shopify store:
                 </Text>
 
-                <Text as="p" variant="bodyMd">
-                  <strong>Packaging:</strong> Manages product packaging options with
-                  unit counts and costs for bulk purchasing.
-                </Text>
+                <BlockStack gap="200">
+                  <Text as="p" variant="bodyMd">
+                    <strong>Ingredient:</strong> Stores food ingredient data including name,
+                    category, supplier, cost per unit, allergens, and activity status.
+                  </Text>
 
-                <Text as="p" variant="bodyMd">
-                  <strong>Price History:</strong> Tracks historical price changes for
-                  ingredients with timestamps and change reasons.
-                </Text>
-              </BlockStack>
+                  <Text as="p" variant="bodyMd">
+                    <strong>Ingredient Category:</strong> Organizes ingredients into categories to
+                    support filtering, reporting, and recipe grouping.
+                  </Text>
+
+                  <Text as="p" variant="bodyMd">
+                    <strong>Ingredient Unit Type:</strong> Defines unit types (e.g., gram, kilogram,
+                    liter) used when specifying costs and recipe quantities.
+                  </Text>
+
+                  <Text as="p" variant="bodyMd">
+                    <strong>Recipe:</strong> Stores recipe data and links to ingredients used by the recipe.
+                  </Text>
+
+                  <Text as="p" variant="bodyMd">
+                    <strong>Packaging:</strong> Manages product packaging options with
+                    unit counts and costs for bulk purchasing.
+                  </Text>
+
+                  <Text as="p" variant="bodyMd">
+                    <strong>Price History:</strong> Tracks historical price changes for
+                    ingredients with timestamps and change reasons.
+                  </Text>
+                </BlockStack>
 
               <Divider />
 
