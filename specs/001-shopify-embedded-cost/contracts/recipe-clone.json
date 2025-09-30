@@ -1,0 +1,59 @@
+{
+  "endpoint": "POST /api/recipes/clone",
+  "description": "Clone a recipe to bootstrap similar products (FR-025)",
+  "request": {
+    "type": "object",
+    "properties": {
+      "sourceProductId": { "type": "string", "required": true },
+      "targetProductId": { "type": "string", "required": true },
+      "cloneInactive": { 
+        "type": "boolean", 
+        "default": true, 
+        "description": "include inactive ingredient lines"
+      },
+      "cloneComplimentary": { 
+        "type": "boolean", 
+        "default": true, 
+        "description": "include complimentary ingredient lines"
+      }
+    }
+  },
+  "responses": {
+    "200": {
+      "description": "Recipe cloned successfully",
+      "type": "object",
+      "properties": {
+        "targetProductId": { "type": "string" },
+        "clonedLines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "ingredientId": { "type": "string" },
+              "ingredientName": { "type": "string" },
+              "quantityGrams": { "type": "number" },
+              "isInactive": { "type": "boolean" },
+              "isComplimentary": { "type": "boolean" }
+            }
+          }
+        },
+        "version": { "type": "number", "description": "initial version for cloned recipe" }
+      }
+    },
+    "404": {
+      "description": "Source product not found or has no recipe",
+      "type": "object",
+      "properties": {
+        "error": { "const": "SOURCE_RECIPE_NOT_FOUND" }
+      }
+    },
+    "409": {
+      "description": "Target product already has a recipe",
+      "type": "object",
+      "properties": {
+        "error": { "const": "TARGET_RECIPE_EXISTS" }
+      }
+    }
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mm-stationery.com/schemas/ingredient-metaobject.json",
+  "title": "Ingredient Metaobject",
+  "description": "Schema for ingredient metaobject stored in Shopify",
+  "type": "object",
+  "required": [
+    "type",
+    "fields"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "ingredient",
+      "description": "Metaobject type identifier"
+    },
+    "handle": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "maxLength": 255,
+      "description": "URL-safe handle for the ingredient"
+    },
+    "fields": {
+      "type": "object",
+      "required": [
+        "name",
+        "category",
+        "unit_type",
+        "cost_per_unit",
+        "is_active"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Ingredient display name"
+        },
+        "category": {
+          "type": "object",
+          "required": ["gid", "type"],
+          "properties": {
+            "gid": {
+              "type": "string",
+              "pattern": "^gid://shopify/Metaobject/[0-9]+$",
+              "description": "Global ID reference to ingredient_category metaobject"
+            },
+            "type": {
+              "type": "string",
+              "const": "ingredient_category"
+            }
+          },
+          "description": "Reference to ingredient category metaobject"
+        },
+        "unit_type": {
+          "type": "object",
+          "required": ["gid", "type"],
+          "properties": {
+            "gid": {
+              "type": "string",
+              "pattern": "^gid://shopify/Metaobject/[0-9]+$",
+              "description": "Global ID reference to ingredient_unit_type metaobject"
+            },
+            "type": {
+              "type": "string",
+              "const": "ingredient_unit_type"
+            }
+          },
+          "description": "Reference to unit type metaobject"
+        },
+        "quantity_on_hand": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Current inventory quantity"
+        },
+        "cost_per_unit": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Cost per unit in shop currency"
+        },
+        "sku": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-]+$",
+          "maxLength": 50,
+          "description": "Stock keeping unit identifier"
+        },
+        "supplier_name": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Supplier or vendor name"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Detailed ingredient description"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Internal notes or comments"
+        },
+        "is_active": {
+          "type": "boolean",
+          "default": true,
+          "description": "Soft delete flag - false if ingredient is deleted"
+        },
+        "deleted_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of deletion, null if active"
+        },
+        "version_token": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optimistic locking version token (ISO 8601 timestamp)"
+        },
+        "used_in_recipes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["gid", "type"],
+            "properties": {
+              "gid": {
+                "type": "string",
+                "pattern": "^gid://shopify/Metaobject/[0-9]+$",
+                "description": "Global ID reference to recipe metaobject"
+              },
+              "type": {
+                "type": "string",
+                "const": "recipe"
+              }
+            }
+          },
+          "description": "List of recipes using this ingredient (bidirectional relationship)"
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Creation timestamp (managed by Shopify)"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last update timestamp (managed by Shopify)"
+    }
+  },
+  "examples": [
+    {
+      "type": "ingredient",
+      "handle": "all-purpose-flour",
+      "fields": {
+        "name": "All-Purpose Flour",
+        "category": {
+          "gid": "gid://shopify/Metaobject/12345",
+          "type": "ingredient_category"
+        },
+        "unit_type": {
+          "gid": "gid://shopify/Metaobject/67890",
+          "type": "ingredient_unit_type"
+        },
+        "quantity_on_hand": 5000,
+        "cost_per_unit": 0.005,
+        "sku": "FLR-001",
+        "supplier_name": "ABC Grain Suppliers",
+        "description": "Standard all-purpose baking flour, suitable for breads, cakes, and pastries",
+        "notes": "Reorder when quantity drops below 1000g",
+        "is_active": true,
+        "deleted_at": null,
+        "version_token": "2025-09-30T10:30:00Z",
+        "used_in_recipes": [
+          {
+            "gid": "gid://shopify/Metaobject/99999",
+            "type": "recipe"
+          }
+        ]
+      },
+      "createdAt": "2025-09-30T10:30:00Z",
+      "updatedAt": "2025-09-30T10:30:00Z"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "endpoint": "GET /api/pricing/matrix",
+  "description": "Get pricing matrix for multiple margins (FR-015)",
+  "parameters": {
+    "query": {
+      "productId": { "type": "string", "required": true },
+      "packagingOptionId": { "type": "string", "required": true },
+      "margins": { 
+        "type": "array", 
+        "items": { "type": "number", "minimum": 0, "maximum": 95 },
+        "default": [40, 45, 50, 55, 60],
+        "description": "Target margin percentages"
+      }
+    }
+  },
+  "responses": {
+    "200": {
+      "description": "Pricing matrix with suggested prices",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "packagingOptionId": { "type": "string" },
+        "packagingType": { "type": "string" },
+        "batchCost": { "type": "number", "description": "total ingredient cost" },
+        "unitCost": { "type": "number", "description": "cost including packaging" },
+        "targetMarginPercent": { "type": "number", "description": "persisted target margin from FR-038" },
+        "matrix": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "marginPercent": { "type": "number" },
+              "suggestedPrice": { "type": "number" },
+              "actualMarginAtPrice": { "type": "number", "description": "reverse calculation verification" }
+            }
+          }
+        },
+        "manualPriceCalculation": {
+          "type": "object",
+          "description": "For ephemeral manual price override (FR-013)",
+          "properties": {
+            "enabled": { "type": "boolean", "const": true },
+            "endpoint": { "type": "string", "const": "/api/pricing/manual-margin" }
+          }
+        }
+      }
+    },
+    "404": {
+      "description": "Product or packaging option not found",
+      "type": "object",
+      "properties": {
+        "error": { "type": "string", "enum": ["PRODUCT_NOT_FOUND", "PACKAGING_NOT_FOUND"] }
+      }
+    }
+  }
+}

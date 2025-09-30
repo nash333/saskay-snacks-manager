@@ -1,0 +1,103 @@
+{
+  "endpoint": "POST /api/recipes/save",
+  "description": "Save recipe with ingredient lines, enforcing uniqueness and triggering cost recalculation (FR-006, FR-007, FR-008, FR-005)",
+  "request": {
+    "type": "object",
+    "properties": {
+      "productId": { "type": "string", "required": true },
+      "recipeLines": {
+        "type": "array",
+        "required": true,
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string", "description": "omit for new lines" },
+            "ingredientId": { "type": "string", "required": true },
+            "quantityGrams": { "type": "number", "required": true, "minimum": 0 },
+            "isInactive": { "type": "boolean", "default": false },
+            "isComplimentary": { "type": "boolean", "default": false },
+            "notes": { "type": "string" }
+          }
+        }
+      },
+      "version": { "type": "number", "description": "for optimistic concurrency" },
+      "triggerCostRecalculation": { "type": "boolean", "default": true }
+    }
+  },
+  "responses": {
+    "200": {
+      "description": "Recipe saved successfully",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "recipeLines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "ingredientId": { "type": "string" },
+              "ingredientName": { "type": "string" },
+              "quantityGrams": { "type": "number" },
+              "isInactive": { "type": "boolean" },
+              "isComplimentary": { "type": "boolean" },
+              "notes": { "type": "string" }
+            }
+          }
+        },
+        "version": { "type": "number" },
+        "costCalculation": {
+          "type": "object",
+          "properties": {
+            "totalCostPerBatch": { "type": "number" },
+            "costPerUnit": { "type": "number" },
+            "margin": { "type": "number" },
+            "calculatedAt": { "type": "string", "format": "date-time" }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "validation warnings (non-blocking)"
+        }
+      }
+    },
+    "400": {
+      "description": "Invalid recipe data",
+      "type": "object",
+      "properties": {
+        "error": { 
+          "enum": ["DUPLICATE_INGREDIENTS", "INVALID_QUANTITIES", "INGREDIENT_NOT_FOUND", "VALIDATION_FAILED"]
+        },
+        "details": {
+          "type": "object",
+          "properties": {
+            "duplicateIngredients": { "type": "array", "items": { "type": "string" } },
+            "invalidLines": { "type": "array", "items": { "type": "object" } },
+            "validationErrors": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "409": {
+      "description": "Version conflict (optimistic concurrency)",
+      "type": "object",
+      "properties": {
+        "error": { "const": "VERSION_CONFLICT" },
+        "currentVersion": { "type": "number" },
+        "providedVersion": { "type": "number" }
+      }
+    },
+    "422": {
+      "description": "Recipe contains only inactive or complimentary ingredients",
+      "type": "object",
+      "properties": {
+        "error": { "const": "NO_ACTIVE_PAID_INGREDIENTS" },
+        "suggestions": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

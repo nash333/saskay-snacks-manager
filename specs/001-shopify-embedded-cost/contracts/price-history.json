@@ -1,0 +1,50 @@
+{
+  "endpoint": "GET /api/ingredients/:ingredientId/history",
+  "description": "Get paginated price change history for an ingredient (FR-037)",
+  "parameters": {
+    "path": {
+      "ingredientId": { "type": "string", "required": true }
+    },
+    "query": {
+      "page": { "type": "number", "default": 1, "minimum": 1 },
+      "pageSize": { "type": "number", "default": 20, "minimum": 1, "maximum": 100 }
+    }
+  },
+  "responses": {
+    "200": {
+      "description": "Price history page",
+      "type": "object",
+      "properties": {
+        "ingredientId": { "type": "string" },
+        "ingredientName": { "type": "string" },
+        "page": { "type": "number" },
+        "pageSize": { "type": "number" },
+        "total": { "type": "number" },
+        "hasNext": { "type": "boolean" },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "oldPrice": { "type": "number" },
+              "newPrice": { "type": "number" },
+              "changedAt": { "type": "string", "format": "date-time" },
+              "userId": { "type": "string" },
+              "userName": { "type": "string", "description": "staff display name if available" },
+              "reason": { "type": "string", "enum": ["price_update", "override_conflict"] },
+              "deltaPercent": { "type": "number", "nullable": true, "description": "percentage change, null if complimentary transition" }
+            }
+          }
+        }
+      }
+    },
+    "404": {
+      "description": "Ingredient not found or not accessible",
+      "type": "object",
+      "properties": {
+        "error": { "const": "INGREDIENT_NOT_FOUND" }
+      }
+    }
+  }
+}

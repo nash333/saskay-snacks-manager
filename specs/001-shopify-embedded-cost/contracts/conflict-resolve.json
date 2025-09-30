@@ -1,0 +1,74 @@
+{
+  "endpoint": "POST /api/ingredients/conflict-resolve",
+  "description": "Resolve version conflicts after stale detection",
+  "request": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["refresh", "override"],
+        "description": "refresh=discard local changes for conflicted items, override=force commit with audit"
+      },
+      "conflictIds": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "IDs of conflicted entities from 409 response"
+      },
+      "overrideData": {
+        "type": "object",
+        "description": "Only required for override action - same structure as batch-save request",
+        "properties": {
+          "ingredients": { "$ref": "#/definitions/ingredients" },
+          "recipes": { "$ref": "#/definitions/recipes" }
+        }
+      }
+    },
+    "required": ["action", "conflictIds"]
+  },
+  "responses": {
+    "200": {
+      "description": "Success",
+      "oneOf": [
+        {
+          "description": "Refresh response - latest versions",
+          "type": "object",
+          "properties": {
+            "action": { "const": "refresh" },
+            "refreshed": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "type": { "type": "string", "enum": ["ingredient", "recipe"] },
+                  "currentData": { "type": "object" },
+                  "versionToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "description": "Override response - audit entries created",
+          "type": "object",
+          "properties": {
+            "action": { "const": "override" },
+            "auditEntries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ingredientId": { "type": "string" },
+                  "oldPrice": { "type": "number" },
+                  "newPrice": { "type": "number" },
+                  "reason": { "const": "override_conflict" }
+                }
+              }
+            },
+            "savedItems": { "$ref": "#/responses/200" }
+          }
+        }
+      ]
+    }
+  }
+}
