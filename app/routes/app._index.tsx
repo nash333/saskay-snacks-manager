@@ -147,6 +147,9 @@ export default function Index() {
                   <Button url="/app/ingredients">
                     Manage Ingredients
                   </Button>
+                    <Button url="/app/recipes">
+                      Manage Recipes
+                    </Button>
                   <Button loading={isLoading} onClick={generateProduct} variant="secondary">
                     Test GraphQL
                   </Button>
