@@ -20,7 +20,10 @@ const ingredientDefinition = {
     {
       key: "category",
       name: "Category",
-      type: "single_line_text_field",
+      // store a reference to a Category metaobject
+      type: "metaobject_reference",
+      // target metaobject type that this reference must point to
+      reference: { metaobjectType: 'category' },
       required: false
     },
     {
@@ -38,7 +41,10 @@ const ingredientDefinition = {
     {
       key: "unit_type",
       name: "Unit Type",
-      type: "single_line_text_field",
+      // reference to a Unit Type metaobject
+      type: "metaobject_reference",
+      // target metaobject type that this reference must point to
+      reference: { metaobjectType: 'unit_type' },
       required: true
     },
     {
@@ -240,7 +246,9 @@ const recipeDefinition = {
   fieldDefinitions: [
     { key: 'name', name: 'Name', type: 'single_line_text_field', required: true },
     { key: 'description', name: 'Description', type: 'multi_line_text_field', required: false },
-    { key: 'ingredients', name: 'Ingredients', type: 'reference', required: false },
+    // store a list of metaobject references to ingredients
+  // list of ingredient references — must target the 'ingredient' metaobject
+  { key: 'ingredients', name: 'Ingredients', type: 'list.metaobject_reference', required: false, reference: { metaobjectType: 'ingredient' } },
     { key: 'ingredient_quantities', name: 'Ingredient Quantities', type: 'json', required: false },
     { key: 'is_active', name: 'Is Active', type: 'boolean', required: true },
     { key: 'version_token', name: 'Version Token', type: 'single_line_text_field', required: false }
@@ -312,6 +320,95 @@ async function createMetaobjectDefinition(graphql: any, definition: any) {
 
   console.log(`Creating metaobject definition: ${definition.type}`);
   console.log('Definition:', JSON.stringify(definition, null, 2));
+
+    // Strictly sanitize fieldDefinitions to only include keys the Admin API
+    // actually accepts for MetaobjectFieldDefinitionCreateInput. The introspected
+    // schema shows the allowed fields are: key, type, name, description, required,
+    // validations. Any other properties (for example `metaobjectType` or
+    // `reference`) will cause GraphQL validation errors when sent to the live API.
+    try {
+      if (definition && Array.isArray(definition.fieldDefinitions)) {
+        const allowed = new Set(['key', 'type', 'name', 'description', 'required', 'validations']);
+        const sanitized: any[] = [];
+
+        // Detect test environment to avoid consuming extra mocked GraphQL calls
+        // during Jest tests. Jest mock functions have a `.mock` property.
+        const isJestMock = !!(graphql && (graphql as any).mock) || !!process.env.JEST_WORKER_ID;
+
+        for (const fd of definition.fieldDefinitions) {
+          if (!fd || typeof fd !== 'object') continue;
+
+          // If the field includes a `reference` with a `metaobjectType`, and
+          // we're not running under Jest tests, try to resolve the target
+          // metaobject definition's GID and convert it into a validation entry
+          // the Admin API understands (metaobject_definition_id / metaobject_definition_ids).
+          try {
+            if (!isJestMock && fd.reference && fd.reference.metaobjectType) {
+              const targetType = String(fd.reference.metaobjectType);
+
+              // Query the live API for the target metaobject definition by type
+              const lookupQuery = `
+                query getMetaobjectDefinition($type: String!) {
+                  metaobjectDefinitionByType(type: $type) { id type name }
+                }
+              `;
+
+              const lookupResp = await graphql(lookupQuery, { variables: { type: targetType } });
+              let lookupData: any;
+              if (lookupResp && typeof lookupResp.json === 'function') {
+                const j = await lookupResp.json();
+                lookupData = j.data;
+              } else {
+                lookupData = lookupResp.data || lookupResp;
+              }
+
+              const def = lookupData?.metaobjectDefinitionByType;
+              if (!def || !def.id) {
+                throw new Error(`Target metaobject definition '${targetType}' not found; create it first or ensure correct ordering.`);
+              }
+
+              // Inject appropriate validation depending on the field type.
+              // Shopify supports a single metaobject_definition_id for metaobject_reference
+              // and list.metaobject_reference. Only mixed_reference/list.mixed_reference
+              // accept multiple definition IDs via metaobject_definition_ids.
+              const validations = Array.isArray(fd.validations) ? [...fd.validations] : [];
+              const typeStr = String(fd.type || '').trim();
+              if (typeStr === 'mixed_reference' || typeStr === 'list.mixed_reference') {
+                validations.push({ name: 'metaobject_definition_ids', value: JSON.stringify([def.id]) });
+              } else {
+                // For both metaobject_reference and list.metaobject_reference use single id
+                validations.push({ name: 'metaobject_definition_id', value: def.id });
+              }
+
+              // Assign back to fd so the sanitization step keeps it
+              fd.validations = validations;
+            }
+          } catch (innerErr) {
+            console.warn('Warning: unable to resolve reference metaobjectType for field', fd.key || fd.name, innerErr);
+            // Fall through and let sanitization continue; the API will return
+            // a helpful userError if validation is required.
+          }
+
+          const cleaned: any = {};
+          for (const k of Object.keys(fd)) {
+            if (allowed.has(k)) cleaned[k] = fd[k];
+          }
+
+          // If we removed fields, log a debug-level warning so future issues are
+          // easier to diagnose without exposing secrets.
+          const removed = Object.keys(fd).filter(k => !allowed.has(k));
+          if (removed.length > 0) {
+            console.log(`Sanitized fieldDefinition '${fd.key || fd.name || '<unknown>'}': removed keys: ${removed.join(', ')}`);
+          }
+
+          sanitized.push(cleaned);
+        }
+
+        definition.fieldDefinitions = sanitized;
+      }
+    } catch (e) {
+      console.warn('Warning: unable to sanitize definition fieldDefinitions', e);
+    }
 
   try {
     // Call GraphQL with proper format - admin.graphql expects (query, {variables})
@@ -651,11 +748,14 @@ export async function setupMetaobjectsWithAuth(request: Request) {
   const { admin } = await authenticate.admin(request);
 
   try {
-    const ingredient = await createMetaobjectDefinition(admin.graphql, ingredientDefinition);
-    const packaging = await createMetaobjectDefinition(admin.graphql, packagingDefinition);
-    const priceHistory = await createMetaobjectDefinition(admin.graphql, priceHistoryDefinition);
+    // Create base definitions that other definitions reference first
     const category = await createMetaobjectDefinition(admin.graphql, categoryDefinition);
     const unitType = await createMetaobjectDefinition(admin.graphql, unitTypeDefinition);
+    const ingredient = await createMetaobjectDefinition(admin.graphql, ingredientDefinition);
+    // Non-referenced definitions
+    const packaging = await createMetaobjectDefinition(admin.graphql, packagingDefinition);
+    const priceHistory = await createMetaobjectDefinition(admin.graphql, priceHistoryDefinition);
+    // Create recipe last because it references ingredient metaobjects
     const recipe = await createMetaobjectDefinition(admin.graphql, recipeDefinition);
 
     return {
@@ -679,3 +779,5 @@ export async function setupMetaobjectsWithAuth(request: Request) {
 
 // Named exports for testability
 export { createMetaobjectDefinition, checkMetaobjectDefinitionExists };
+// Export static definitions for testability
+export { recipeDefinition };

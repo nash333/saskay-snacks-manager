@@ -25,7 +25,9 @@ export default function App() {
           Home
         </Link>
         <Link to="/app/config">Configuration</Link>
+        <Link to="/app/setup-metaobjects">Metaobjects</Link>
         <Link to="/app/ingredients">Ingredients</Link>
+        <Link to="/app/recipes">Recipes</Link>
         <Link to="/app/additional">Additional page</Link>
       </NavMenu>
       <Outlet />

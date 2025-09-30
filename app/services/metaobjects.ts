@@ -195,7 +195,7 @@ export class MetaobjectsService {
 
       try {
         const mutation = `
-          mutation metaobjectDefinitionCreate($definition: MetaobjectDefinitionInput!) {
+          mutation metaobjectDefinitionCreate($definition: MetaobjectDefinitionCreateInput!) {
             metaobjectDefinitionCreate(definition: $definition) {
               metaobjectDefinition {
                 id
